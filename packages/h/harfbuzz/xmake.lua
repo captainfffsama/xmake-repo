@@ -20,8 +20,7 @@ package("harfbuzz")
             package:add("deps", "icu4c")
         end
         if package:config("freetype") then
-            package:add("deps", "freetype",{config={harfbuzz=true}})
-            print("test")
+            package:add("deps", "freetype",{configs={harfbuzz=false}})
         end
     end)
 
@@ -36,7 +35,6 @@ package("harfbuzz")
         table.insert(configs, "-Dicu=" .. (package:config("icu") and "enabled" or "disabled"))
         table.insert(configs, "-Dfreetype=" .. (package:config("freetype") and "enabled" or "disabled"))
         local envs = meson.buildenvs(package)
-        print(envs)
         if package:is_plat("windows") then
             for _, dep in ipairs(package:orderdeps()) do
                 local fetchinfo = dep:fetch()
@@ -50,7 +48,6 @@ package("harfbuzz")
                 end
             end
         end
-        print(configs)
         meson.install(package, configs, {envs = envs})
     end)
 

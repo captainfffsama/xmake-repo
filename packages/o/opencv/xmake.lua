@@ -23,7 +23,6 @@ package("opencv")
     add_resources("4.5.1", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/4.5.1.tar.gz", "d4b604c2c55b44d5801c6928d11c1d000c39bbd3237927329a73ff2d05a31151")
     add_resources("4.2.0", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/4.2.0.tar.gz", "8a6b5661611d89baa59a26eb7ccf4abb3e55d73f99bb52d8f7c32265c8a43020")
     add_resources("3.4.9", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/3.4.9.tar.gz", "dc7d95be6aaccd72490243efcec31e2c7d3f21125f88286186862cf9edb14a57")
-
     add_configs("bundled", {description = "Build 3rd-party libraries with OpenCV.", default = true, type = "boolean"})
 
     local features = {"1394",
@@ -64,7 +63,7 @@ package("opencv")
     add_configs("cuda", {description = "Enable CUDA support.", default = false, type = "boolean"})
     add_configs("dynamic_parallel", {description = "Dynamically load parallel runtime (TBB etc.).", default = false, type = "boolean"})
     add_configs("freetype", {description = "Install freetype to support chinese character", default = false, type = "boolean"})
-
+    add_configs("build_world",{description = "build world", default = true, type =boolean})
     if is_plat("macosx") then
         add_frameworks("Foundation", "CoreFoundation", "CoreGraphics", "AppKit", "OpenCL", "Accelerate")
     elseif is_plat("linux") then
@@ -109,8 +108,8 @@ package("opencv")
             package:add("deps", "cmake", "python 3.x", {kind = "binary"})
         end
         if package:config("freetype") then
-            package:add("deps", "freetype")
-            package:add("deps","harfbuzz")
+            package:add("deps", "freetype",{configs={harfbuzz=false}})
+            package:add("deps","harfbuzz",{configs = {freetype = true}})
         end
     end)
 
@@ -131,6 +130,9 @@ package("opencv")
                          "-DBUILD_opencv_python2=OFF",
                          "-DBUILD_opencv_python3=OFF",
                          "-DBUILD_JAVA=OFF"}
+        if package:config("build_world") then
+            table.insert(configs, "-DBUILD_opencv_world=ON")
+        end
         if package:config("bundled") then
             table.insert(configs, "-DOPENCV_FORCE_3RDPARTY_BUILD=ON")
         end
@@ -152,7 +154,7 @@ package("opencv")
         if resourcedir then
             import("lib.detect.find_path")
             local modulesdir = assert(find_path("modules", path.join(resourcedir, "*")), "modules not found!")
-            print("modulesdir:",modulesdir)
+            -- print("modulesdir:",modulesdir)
             table.insert(configs, "-DOPENCV_EXTRA_MODULES_PATH=" .. path.absolute(path.join(modulesdir, "modules")))
 
             local needchangecmakes=modulesdir .. "/modules/xfeatures2d/cmake/download_boostdesc.cmake"
@@ -161,15 +163,35 @@ package("opencv")
             io.replace(needchangecmakes,"https://raw.githubusercontent.com/opencv/opencv_3rdparty/","https://soft.chiebot.com:10000/code_mirror/opencv_3rdparty/", {plain = true})
             if package:config("freetype") then
                 table.insert(configs, "-DWITH_FREETYPE=ON" )
-                if package:config("freetype") then
-                    import("net.http")
-                    http.download("https://gist.githubusercontent.com/captainfffsama/99076153c7b79a951352678a5ca27fe0/raw/02d924e8004d1723b5f148ddbf15aeecfbf0327f/CMakeList.txt",modulesdir .. "/modules/freetype/CMakeLists.txt")
-                end
+                -- if package:config("freetype") then
+                --     import("net.http")
+                --     http.download("https://gist.githubusercontent.com/captainfffsama/99076153c7b79a951352678a5ca27fe0/raw/02d924e8004d1723b5f148ddbf15aeecfbf0327f/CMakeList.txt",modulesdir .. "/modules/freetype/CMakeLists.txt")
+                -- end
             end
         end
         import("package.tools.cmake").install(package, configs, {buildir = "bd"})
-        -- 去除,
-        for _, link in ipairs({"opencv_phase_unwrapping", "opencv_surface_matching", "opencv_saliency", "opencv_wechat_qrcode", "opencv_mcc", "opencv_face", "opencv_img_hash", "opencv_videostab", "opencv_structured_light", "opencv_intensity_transform", "opencv_ccalib", "opencv_line_descriptor", "opencv_stereo", "opencv_dnn_objdetect", "opencv_dnn_superres", "opencv_fuzzy", "opencv_hfs", "opencv_rapid", "opencv_bgsegm", "opencv_bioinspired", "opencv_rgbd", "opencv_dpm", "opencv_aruco", "opencv_reg", "opencv_tracking", "opencv_datasets",  "opencv_shape", "opencv_barcode", "opencv_superres", "opencv_viz", "opencv_plot", "opencv_quality", "opencv_text", "opencv_cudaoptflow", "opencv_optflow", "opencv_ximgproc","opencv_xfeatures2d", "opencv_xobjdetect", "opencv_xphoto", "opencv_stitching", "opencv_ml", "opencv_photo", "opencv_cudaobjdetect", "opencv_cudalegacy", "opencv_cudabgsegm", "opencv_cudafeatures2d", "opencv_cudastereo", "opencv_cudaimgproc", "opencv_cudafilters", "opencv_cudaarithm", "opencv_cudawarping", "opencv_cudacodec", "opencv_cudev", "opencv_gapi", "opencv_objdetect", "opencv_highgui", "opencv_videoio", "opencv_video", "opencv_calib3d", "opencv_dnn", "opencv_features2d", "opencv_flann", "opencv_imgcodecs", "opencv_imgproc", "opencv_core"}) do
+
+        if package:config("build_world") then
+            opencv_modules={"opencv_world",}
+        else
+            opencv_modules={"opencv_phase_unwrapping", "opencv_surface_matching", "opencv_saliency",
+        "opencv_wechat_qrcode", "opencv_mcc", "opencv_face", "opencv_img_hash", "opencv_videostab",
+        "opencv_structured_light", "opencv_intensity_transform", "opencv_ccalib", "opencv_line_descriptor",
+        "opencv_stereo", "opencv_dnn_objdetect", "opencv_dnn_superres", "opencv_fuzzy", "opencv_hfs",
+        "opencv_rapid", "opencv_bgsegm", "opencv_bioinspired", "opencv_rgbd", "opencv_dpm", "opencv_aruco",
+        "opencv_reg", "opencv_tracking", "opencv_datasets",  "opencv_shape", "opencv_barcode",
+        "opencv_superres", "opencv_viz", "opencv_plot", "opencv_quality", "opencv_text", "opencv_cudaoptflow",
+        "opencv_optflow", "opencv_ximgproc","opencv_xfeatures2d", "opencv_xobjdetect", "opencv_xphoto",
+        "opencv_stitching", "opencv_ml", "opencv_photo", "opencv_cudaobjdetect", "opencv_cudalegacy",
+        "opencv_cudabgsegm", "opencv_cudafeatures2d", "opencv_cudastereo", "opencv_cudaimgproc",
+        "opencv_cudafilters", "opencv_cudaarithm", "opencv_cudawarping", "opencv_cudacodec", "opencv_cudev",
+        "opencv_gapi", "opencv_objdetect", "opencv_highgui", "opencv_videoio", "opencv_video",
+        "opencv_calib3d", "opencv_dnn", "opencv_features2d", "opencv_flann", "opencv_imgcodecs",
+        "opencv_imgproc", "opencv_core"}
+        end
+
+
+        for _, link in ipairs(opencv_modules) do
             local reallink = link
             if package:is_plat("windows", "mingw") then
                 reallink = reallink .. package:version():gsub("%.", "")

@@ -3,14 +3,16 @@ package("freetype")
     set_homepage("https://www.freetype.org")
     set_description("A freely available software library to render fonts.")
 
-    set_urls("https://downloads.sourceforge.net/project/freetype/freetype2/$(version)/freetype-$(version).tar.gz",
-             "https://download.savannah.gnu.org/releases/freetype/freetype-$(version).tar.gz",
-             "https://gitlab.freedesktop.org/freetype/freetype.git")
-    add_versions("2.12.1", "efe71fd4b8246f1b0b1b9bfca13cfff1c9ad85930340c27df469733bbb620938")
-    add_versions("2.11.1", "f8db94d307e9c54961b39a1cc799a67d46681480696ed72ecf78d4473770f09b")
-    add_versions("2.11.0", "a45c6b403413abd5706f3582f04c8339d26397c4304b78fa552f2215df64101f")
-    add_versions("2.10.4", "5eab795ebb23ac77001cfb68b7d4d50b5d6c7469247b0b01b2c953269f658dac")
-    add_versions("2.9.1", "ec391504e55498adceb30baceebd147a6e963f636eb617424bcfc47a169898ce")
+    set_urls("https://git.chiebot.com:10000/Chiebot-Mirror/freetype.git"
+            --  "https://downloads.sourceforge.net/project/freetype/freetype2/$(version)/freetype-$(version).tar.gz",
+            --  "https://download.savannah.gnu.org/releases/freetype/freetype-$(version).tar.gz"
+             )
+    add_versions("2.12.1", "e8ebfe988b5f57bfb9a3ecb13c70d9791bce9ecf")
+    -- add_versions("2.12.1", "efe71fd4b8246f1b0b1b9bfca13cfff1c9ad85930340c27df469733bbb620938")
+    -- add_versions("2.11.1", "f8db94d307e9c54961b39a1cc799a67d46681480696ed72ecf78d4473770f09b")
+    -- add_versions("2.11.0", "a45c6b403413abd5706f3582f04c8339d26397c4304b78fa552f2215df64101f")
+    -- add_versions("2.10.4", "5eab795ebb23ac77001cfb68b7d4d50b5d6c7469247b0b01b2c953269f658dac")
+    -- add_versions("2.9.1", "ec391504e55498adceb30baceebd147a6e963f636eb617424bcfc47a169898ce")
 
     add_patches("2.11.0", path.join(os.scriptdir(), "patches", "2.11.0", "writing_system.patch"), "3172cf1e50501fc7455d9bb04ef4d5bb35b9712bb635f217f90ae6b2f7532eef")
 
@@ -40,8 +42,7 @@ package("freetype")
         local function add_dep(conf, pkg)
             if package:config(conf) then
                 if conf=='harfbuzz' then
-                    package:add("deps","harfbuzz",{configs={freetype=false}})
-                    print(run)
+                    package:add("deps","harfbuzz",{configs={freetype= false}})
                 else
                     package:add("deps", pkg or conf)
                 end
@@ -59,6 +60,7 @@ package("freetype")
         local configs = {"-DCMAKE_INSTALL_LIBDIR=lib"}
         table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:debug() and "Debug" or "Release"))
         table.insert(configs, "-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
+
         local function add_dep(opt)
             if package:config(opt.conf) then
                 table.insert(configs, "-DFT_WITH_" .. opt.cmakewith .. "=ON")
@@ -77,12 +79,12 @@ package("freetype")
                 table.insert(configs, "-DCMAKE_DISABLE_FIND_PACKAGE_" .. (opt.cmakedisable or opt.cmakewith) .. "=ON")
             end
         end
+
         add_dep({conf = "bzip2", cmakewith = "BZIP2", cmakedisable = "BZip2", cmakeinclude = "BZIP2_INCLUDE_DIR"})
         add_dep({conf = "png", pkg = "libpng", cmakewith = "PNG", cmakeinclude = "PNG_PNG_INCLUDE_DIR", cmakelib = "PNG_LIBRARY"})
         add_dep({conf = "woff2", pkg = "brotli", cmakewith = "BROTLI", cmakedisable = "BrotliDec", cmakeinclude = "BROTLIDEC_INCLUDE_DIRS", cmakelib = "BROTLIDEC_LIBRARIES"})
         add_dep({conf = "zlib", cmakewith = "ZLIB", cmakeinclude = "ZLIB_INCLUDE_DIR", cmakelib = "ZLIB_LIBRARY"})
-
-        --TODO: 这里没有处理 harfbuzz
+        add_dep({conf = "harfbuzz",cmakewith= "HarfBuzz",cmakeinclude= "HarfBuzz_INCLUDE_DIRS",cmakelib = "HarfBuzz_LIBRARY"})
 
         import("package.tools.cmake").install(package, configs)
     end)
