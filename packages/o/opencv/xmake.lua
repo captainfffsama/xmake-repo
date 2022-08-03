@@ -11,7 +11,7 @@ package("opencv")
     add_versions("4.5.4", "c20bb83dd790fc69df9f105477e24267706715a9d3c705ca1e7f613c7b3bad3d")
     add_versions("4.5.3", "77f616ae4bea416674d8c373984b20c8bd55e7db887fd38c6df73463a0647bab")
     add_versions("4.5.2", "ae258ed50aa039279c3d36afdea5c6ecf762515836b27871a8957c610d0424f8")
-    add_versions("4.5.1", "e27fe5b168918ab60d58d7ace2bd82dd14a4d0bd1d3ae182952c2113f5637513")
+    add_versions("4.5.1", "9de26a952ce9ac378e4f867dad37b96395844d20bd16597b9ee3cbfda7a3298b")
     add_versions("4.2.0", "9ccb2192d7e8c03c58fee07051364d94ed7599363f3b0dce1c5e6cc11c1bb0ec")
     add_versions("3.4.9", "b7ea364de7273cfb3b771a0d9c111b8b8dfb42ff2bcd2d84681902fb8f49892a")
 
@@ -20,7 +20,7 @@ package("opencv")
     add_resources("4.5.4", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/4.5.4.tar.gz", "ad74b440b4539619dc9b587995a16b691246023d45e34097c73e259f72de9f81")
     add_resources("4.5.3", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/4.5.3.tar.gz", "73da052fd10e73aaba2560eaff10cc5177e2dcc58b27f8aedf7c649e24c233bc")
     add_resources("4.5.2", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/4.5.2.tar.gz", "9f52fd3114ac464cb4c9a2a6a485c729a223afb57b9c24848484e55cef0b5c2a")
-    add_resources("4.5.1", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/4.5.1.tar.gz", "12c3b1ddd0b8c1a7da5b743590a288df0934e5cef243e036ca290c2e45e425f5")
+    add_resources("4.5.1", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/4.5.1.tar.gz", "d4b604c2c55b44d5801c6928d11c1d000c39bbd3237927329a73ff2d05a31151")
     add_resources("4.2.0", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/4.2.0.tar.gz", "8a6b5661611d89baa59a26eb7ccf4abb3e55d73f99bb52d8f7c32265c8a43020")
     add_resources("3.4.9", "opencv_contrib", "https://git.chiebot.com:10000/Chiebot-Mirror/opencv_contrib/archive/3.4.9.tar.gz", "dc7d95be6aaccd72490243efcec31e2c7d3f21125f88286186862cf9edb14a57")
 
@@ -63,6 +63,7 @@ package("opencv")
     add_configs("blas", {description = "Set BLAS vendor.", values = {"mkl", "openblas"}})
     add_configs("cuda", {description = "Enable CUDA support.", default = false, type = "boolean"})
     add_configs("dynamic_parallel", {description = "Dynamically load parallel runtime (TBB etc.).", default = false, type = "boolean"})
+    add_configs("freetype", {description = "Install freetype to support chinese character", default = false, type = "boolean"})
 
     if is_plat("macosx") then
         add_frameworks("Foundation", "CoreFoundation", "CoreGraphics", "AppKit", "OpenCL", "Accelerate")
@@ -107,6 +108,10 @@ package("opencv")
         if not package.is_built or package:is_built() then
             package:add("deps", "cmake", "python 3.x", {kind = "binary"})
         end
+        if package:config("freetype") then
+            package:add("deps", "freetype")
+            package:add("deps","harfbuzz")
+        end
     end)
 
     on_install("linux", "macosx", "windows", "mingw@windows,msys", function (package)
@@ -116,6 +121,10 @@ package("opencv")
                          "-DBUILD_TESTS=OFF",
                          "-DBUILD_opencv_hdf=OFF",
                          "-DBUILD_opencv_java=OFF",
+                         -- "-DWITH_GTK_2_X=ON",
+                         -- "-DWITH_GTK=ON",
+                         -- "-DWITH_OPENGL=ON",
+                         -- "-DWITH_QT=ON",
                          "-DBUILD_opencv_text=ON",
                          "-DOPENCV_ENABLE_NONFREE=ON",
                          "-DOPENCV_GENERATE_PKGCONFIG=ON",
@@ -143,10 +152,24 @@ package("opencv")
         if resourcedir then
             import("lib.detect.find_path")
             local modulesdir = assert(find_path("modules", path.join(resourcedir, "*")), "modules not found!")
+            print("modulesdir:",modulesdir)
             table.insert(configs, "-DOPENCV_EXTRA_MODULES_PATH=" .. path.absolute(path.join(modulesdir, "modules")))
+
+            local needchangecmakes=modulesdir .. "/modules/xfeatures2d/cmake/download_boostdesc.cmake"
+            io.replace(needchangecmakes,"https://raw.githubusercontent.com/opencv/opencv_3rdparty/","https://soft.chiebot.com:10000/code_mirror/opencv_3rdparty/", {plain = true})
+            local needchangecmakes=modulesdir .. "/modules/xfeatures2d/cmake/download_vgg.cmake"
+            io.replace(needchangecmakes,"https://raw.githubusercontent.com/opencv/opencv_3rdparty/","https://soft.chiebot.com:10000/code_mirror/opencv_3rdparty/", {plain = true})
+            if package:config("freetype") then
+                table.insert(configs, "-DWITH_FREETYPE=ON" )
+                if package:config("freetype") then
+                    import("net.http")
+                    http.download("https://gist.githubusercontent.com/captainfffsama/99076153c7b79a951352678a5ca27fe0/raw/02d924e8004d1723b5f148ddbf15aeecfbf0327f/CMakeList.txt",modulesdir .. "/modules/freetype/CMakeLists.txt")
+                end
+            end
         end
         import("package.tools.cmake").install(package, configs, {buildir = "bd"})
-        for _, link in ipairs({"opencv_phase_unwrapping", "opencv_surface_matching", "opencv_saliency", "opencv_wechat_qrcode", "opencv_mcc", "opencv_face", "opencv_img_hash", "opencv_videostab", "opencv_structured_light", "opencv_intensity_transform", "opencv_ccalib", "opencv_line_descriptor", "opencv_stereo", "opencv_dnn_objdetect", "opencv_dnn_superres", "opencv_fuzzy", "opencv_hfs", "opencv_rapid", "opencv_bgsegm", "opencv_bioinspired", "opencv_rgbd", "opencv_dpm", "opencv_aruco", "opencv_reg", "opencv_tracking", "opencv_datasets", "opencv_xfeatures2d", "opencv_shape", "opencv_barcode", "opencv_superres", "opencv_viz", "opencv_plot", "opencv_quality", "opencv_text", "opencv_cudaoptflow", "opencv_optflow", "opencv_ximgproc", "opencv_xobjdetect", "opencv_xphoto", "opencv_stitching", "opencv_ml", "opencv_photo", "opencv_cudaobjdetect", "opencv_cudalegacy", "opencv_cudabgsegm", "opencv_cudafeatures2d", "opencv_cudastereo", "opencv_cudaimgproc", "opencv_cudafilters", "opencv_cudaarithm", "opencv_cudawarping", "opencv_cudacodec", "opencv_cudev", "opencv_gapi", "opencv_objdetect", "opencv_highgui", "opencv_videoio", "opencv_video", "opencv_calib3d", "opencv_dnn", "opencv_features2d", "opencv_flann", "opencv_imgcodecs", "opencv_imgproc", "opencv_core"}) do
+        -- 去除,
+        for _, link in ipairs({"opencv_phase_unwrapping", "opencv_surface_matching", "opencv_saliency", "opencv_wechat_qrcode", "opencv_mcc", "opencv_face", "opencv_img_hash", "opencv_videostab", "opencv_structured_light", "opencv_intensity_transform", "opencv_ccalib", "opencv_line_descriptor", "opencv_stereo", "opencv_dnn_objdetect", "opencv_dnn_superres", "opencv_fuzzy", "opencv_hfs", "opencv_rapid", "opencv_bgsegm", "opencv_bioinspired", "opencv_rgbd", "opencv_dpm", "opencv_aruco", "opencv_reg", "opencv_tracking", "opencv_datasets",  "opencv_shape", "opencv_barcode", "opencv_superres", "opencv_viz", "opencv_plot", "opencv_quality", "opencv_text", "opencv_cudaoptflow", "opencv_optflow", "opencv_ximgproc","opencv_xfeatures2d", "opencv_xobjdetect", "opencv_xphoto", "opencv_stitching", "opencv_ml", "opencv_photo", "opencv_cudaobjdetect", "opencv_cudalegacy", "opencv_cudabgsegm", "opencv_cudafeatures2d", "opencv_cudastereo", "opencv_cudaimgproc", "opencv_cudafilters", "opencv_cudaarithm", "opencv_cudawarping", "opencv_cudacodec", "opencv_cudev", "opencv_gapi", "opencv_objdetect", "opencv_highgui", "opencv_videoio", "opencv_video", "opencv_calib3d", "opencv_dnn", "opencv_features2d", "opencv_flann", "opencv_imgcodecs", "opencv_imgproc", "opencv_core"}) do
             local reallink = link
             if package:is_plat("windows", "mingw") then
                 reallink = reallink .. package:version():gsub("%.", "")

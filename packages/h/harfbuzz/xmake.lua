@@ -4,12 +4,8 @@ package("harfbuzz")
     set_description("HarfBuzz is a text shaping library.")
     set_license("MIT")
 
-    add_urls("https://github.com/harfbuzz/harfbuzz/archive/refs/tags/$(version).tar.gz",
-             "https://github.com/harfbuzz/harfbuzz.git")
-    add_versions("2.8.1", "b3f17394c5bccee456172b2b30ddec0bb87e9c5df38b4559a973d14ccd04509d")
-    add_versions("2.9.0", "bf5d5bad69ee44ff1dd08800c58cb433e9b3bf4dad5d7c6f1dec5d1cf0249d04")
-    add_versions("3.0.0", "55f7e36671b8c5569b6438f80efed2fd663298f785ad2819e115b35b5587ef69")
-    add_versions("3.1.1", "5283c7f5f1f06ddb5e2e88319f6946ea37d2eb3a574e0f73f6000de8f9aa34e6")
+    add_urls("https://git.chiebot.com:10000/Chiebot-Mirror/harfbuzz.git")
+    add_versions("5.0.1", "cbccadba8d1e51d6cc03a891b7c3a17f598e774c")
 
     add_configs("icu", {description = "Enable ICU library unicode functions.", default = false, type = "boolean"})
     add_configs("freetype", {description = "Enable freetype interop helpers.", default = true, type = "boolean"})
@@ -24,7 +20,8 @@ package("harfbuzz")
             package:add("deps", "icu4c")
         end
         if package:config("freetype") then
-            package:add("deps", "freetype")
+            package:add("deps", "freetype",{config={harfbuzz=true}})
+            print("test")
         end
     end)
 
@@ -39,6 +36,7 @@ package("harfbuzz")
         table.insert(configs, "-Dicu=" .. (package:config("icu") and "enabled" or "disabled"))
         table.insert(configs, "-Dfreetype=" .. (package:config("freetype") and "enabled" or "disabled"))
         local envs = meson.buildenvs(package)
+        print(envs)
         if package:is_plat("windows") then
             for _, dep in ipairs(package:orderdeps()) do
                 local fetchinfo = dep:fetch()
@@ -52,6 +50,7 @@ package("harfbuzz")
                 end
             end
         end
+        print(configs)
         meson.install(package, configs, {envs = envs})
     end)
 

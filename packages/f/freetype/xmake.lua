@@ -29,6 +29,7 @@ package("freetype")
     add_configs("png", {description = "Support PNG compressed OpenType embedded bitmaps", default = false, type = "boolean"})
     add_configs("woff2", {description = "Use Brotli library to support decompressing WOFF2 fonts", default = false, type = "boolean"})
     add_configs("zlib", {description = "Support reading gzip-compressed font files", default = false, type = "boolean"})
+    add_configs("harfbuzz", {description = "Suppport harfbuzz", default = false, type = "boolean"})
 
     if is_plat("windows", "mingw") then
         add_deps("cmake")
@@ -41,7 +42,12 @@ package("freetype")
     on_load(function (package)
         local function add_dep(conf, pkg)
             if package:config(conf) then
-                package:add("deps", pkg or conf)
+                if conf=='harfbuzz' then
+                    package:add("deps","harfbuzz",{configs={freetype=false}})
+                    print(run)
+                else
+                    package:add("deps", pkg or conf)
+                end
             end
         end
 
@@ -49,6 +55,7 @@ package("freetype")
         add_dep("zlib")
         add_dep("png", "libpng")
         add_dep("woff2", "brotli")
+        add_dep("harfbuzz")
     end)
 
     on_install("windows", "mingw", function (package)
@@ -78,22 +85,26 @@ package("freetype")
         add_dep({conf = "woff2", pkg = "brotli", cmakewith = "BROTLI", cmakedisable = "BrotliDec", cmakeinclude = "BROTLIDEC_INCLUDE_DIRS", cmakelib = "BROTLIDEC_LIBRARIES"})
         add_dep({conf = "zlib", cmakewith = "ZLIB", cmakeinclude = "ZLIB_INCLUDE_DIR", cmakelib = "ZLIB_LIBRARY"})
 
+        --TODO: 这里没有处理 harfbuzz
+
         import("package.tools.cmake").install(package, configs)
     end)
 
     on_install("linux", "macosx", function (package)
         io.gsub("builds/unix/configure", "libbrotlidec", "brotli")
-        local configs = { "--enable-freetype-config",
-                          "--without-harfbuzz"}
+        local configs = { "--enable-freetype-config",}
+
         table.insert(configs, "--enable-shared=" .. (package:config("shared") and "yes" or "no"))
         table.insert(configs, "--enable-static=" .. (package:config("shared") and "no" or "yes"))
         local function add_dep(conf, name)
+            print("--with-" .. (name or conf) .. "=" .. (package:config(conf) and "yes" or "no"))
             table.insert(configs, "--with-" .. (name or conf) .. "=" .. (package:config(conf) and "yes" or "no"))
         end
         add_dep("bzip2")
         add_dep("png")
         add_dep("woff2", "brotli")
         add_dep("zlib")
+        add_dep("harfbuzz")
         if package:config("pic") ~= false then
             table.insert(configs, "--with-pic")
         end
