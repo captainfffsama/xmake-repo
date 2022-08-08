@@ -7,6 +7,7 @@ package("grpc")
 
     add_urls("https://git.chiebot.com:10000/Chiebot-Mirror/grpc.git")
     add_versions("1.48.0", "d2054ec6c6e8abcecf0e24b0b4ee75035d80c3cc")
+    add_versions("1.41.0", "fc662b7964384b701af5bd3ce6994d2180080eb4")
     add_versions("1.37.0", "44c40ac23023b7b3dd82744372c06817cc203898")
 
     -- add_configs("usemirror", {description = "Build 3rd-party libraries by mirror.", default = true, type = "boolean"})
@@ -19,14 +20,22 @@ package("grpc")
         import("net.http")
         http.download("https://soft.chiebot.com:10000/code_mirror/gitmodules/gitmodules_grpc",packge_tmp_dir .."/.gitmodules")
         local third_party_mirror="https://git.chiebot.com:10000/HuQiong/grpc_3rd.git"
+        -- local third_party_mirror="/home/chiebotgpuhq/tmp_space/grpc_3rd"
         os.tryrm(packge_tmp_dir .."/third_party")
         git.clone(third_party_mirror,{branch = "v"..package:version_str(),depth=1,outputdir=packge_tmp_dir .. "/third_party"})
+    end)
+
+    on_load(function (package)
+        if package:version():lt("1.41.0") then
+            package:add("deps","abseil 20200923.3")
+        end
     end)
 
     on_install("linux","windows",function (package)
         local configs = {}
         table.insert(configs,"-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
         table.insert(configs,"-DCMAKE_BUILD_TYPE=" .. (package:config("debug") and "Debug" or "Release"))
+        -- table.insert(configs,"-DgRPC_ABSL_PROVIDER=module")
         import("package.tools.cmake").install(package, configs)
 
         for _, link in ipairs({"absl_bad_any_cast_impl","absl_bad_optional_access",
@@ -60,11 +69,12 @@ package("grpc")
             package:add("links", reallink)
         end
         package:addenv("PATH", "bin")
+        package:addenv("PATH", package:installdir())
 
     end)
 
 
-    -- on_test(function (package)
-    --     assert(package:has_cxxincludes("grpcpp/grpcpp.h"))
-    -- end)
+    on_test(function (package)
+        assert(package:has_cxxincludes("grpcpp/grpcpp.h"))
+    end)
 
