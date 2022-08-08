@@ -1,4 +1,5 @@
-.history
+.vscode/
+.history/
 *.a
 *.b
 *.o

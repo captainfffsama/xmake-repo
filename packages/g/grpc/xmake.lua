@@ -8,7 +8,6 @@ package("grpc")
     add_urls("https://git.chiebot.com:10000/Chiebot-Mirror/grpc.git")
     add_versions("1.48.0", "d2054ec6c6e8abcecf0e24b0b4ee75035d80c3cc")
     add_versions("1.37.0", "44c40ac23023b7b3dd82744372c06817cc203898")
-    cprint('${bright green} only support 1.48.0,1.37.0')
 
     -- add_configs("usemirror", {description = "Build 3rd-party libraries by mirror.", default = true, type = "boolean"})
 
@@ -16,14 +15,12 @@ package("grpc")
         local packge_tmp_dir=package:cachedir() .. "/source/grpc"
         os.tryrm(packge_tmp_dir)
         import("devel.git")
-        git.clone(package:urls()[1],{branch = "v"..package:version_str(),outputdir=packge_tmp_dir})
+        git.clone(package:urls()[1],{branch = "v"..package:version_str(),depth=1,outputdir=packge_tmp_dir})
         import("net.http")
         http.download("https://soft.chiebot.com:10000/code_mirror/gitmodules/gitmodules_grpc",packge_tmp_dir .."/.gitmodules")
         local third_party_mirror="https://git.chiebot.com:10000/HuQiong/grpc_3rd.git"
         os.tryrm(packge_tmp_dir .."/third_party")
         git.clone(third_party_mirror,{branch = "v"..package:version_str(),depth=1,outputdir=packge_tmp_dir .. "/third_party"})
-
-        print("download done!")
     end)
 
     on_install("linux","windows",function (package)
